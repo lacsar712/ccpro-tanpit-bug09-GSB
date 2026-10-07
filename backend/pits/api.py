@@ -3,7 +3,7 @@ from ninja.errors import HttpError
 
 from pits.auth import BearerAuth, make_token
 from pits.models import Pit, User, Yard
-from pits.rules import RuleError, assert_can_set_status, latest_ph
+from pits.rules import RuleError, assert_can_set_status, assert_valid_ph, latest_ph
 
 api = NinjaAPI(title="TanPit", urls_namespace="tanpit")
 auth = BearerAuth()
@@ -23,7 +23,7 @@ class StatusIn(Schema):
 
 
 def pit_json(pit: Pit, page: int = 1, page_size: int = 3) -> dict:
-    rows = list(pit.samples.order_by("ph", "id"))
+    rows = list(pit.samples.order_by("-taken_at", "-id"))
     total = len(rows)
     start = max(0, (page - 1) * page_size)
     slice_rows = rows[start : start + page_size]
@@ -83,11 +83,14 @@ def list_samples(request, pit_id: int, page: int = 1):
 
 @api.post("/pits/{pit_id}/samples", auth=auth)
 def add_sample(request, pit_id: int, payload: SampleIn):
-    pit = Pit.objects.filter(id=pit_id).prefetch_related("samples").first()
+    pit = Pit.objects.filter(id=pit_id).first()
     if pit is None:
         raise HttpError(404, "坑不存在")
+    try:
+        assert_valid_ph(payload.ph)
+    except RuleError as exc:
+        raise HttpError(400, str(exc))
     pit.samples.create(ph=payload.ph, operator=request.auth.username)
-    pit.refresh_from_db()
     return pit_json(pit, page=1)
 
 

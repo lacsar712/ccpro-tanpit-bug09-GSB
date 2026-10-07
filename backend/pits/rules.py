@@ -1,13 +1,23 @@
 """鞣坑放液门槛：最近一次浸液酸碱度须在 3.5～5.0。"""
 
+import math
+
 from pits.models import Pit
 
 MIN_PH = 3.5
 MAX_PH = 5.0
 
+PH_FLOOR = 0.0
+PH_CEIL = 14.0
+
 
 class RuleError(ValueError):
     pass
+
+
+def assert_valid_ph(ph: float) -> None:
+    if not math.isfinite(ph) or ph < PH_FLOOR or ph > PH_CEIL:
+        raise RuleError(f"非法酸碱度 {ph}，须在 {PH_FLOOR}～{PH_CEIL} 之间")
 
 
 def latest_ph(pit: Pit) -> float | None:
