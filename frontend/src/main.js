@@ -91,10 +91,15 @@ class TanYard extends LitElement {
 
   async writePh() {
     this.err = "";
+    const value = Number(this.ph);
+    if (!Number.isFinite(value) || value < 0 || value > 14) {
+      this.err = "酸碱度不合法：须为 0～14 的有限数值";
+      return;
+    }
     try {
       this.picked = await api(`/api/pits/${this.picked.id}/samples`, {
         method: "POST",
-        body: JSON.stringify({ ph: Number(this.ph) }),
+        body: JSON.stringify({ ph: value }),
       });
       await this.refresh();
       this.ledgerPage = 1;
@@ -167,7 +172,9 @@ class TanYard extends LitElement {
               </button>
             </p>
             <ul>
-              ${(this.picked.ledger || []).map((s) => html`<li>${s.ph} · ${s.operator}</li>`)}
+              ${(this.picked.ledger || []).map(
+                (s) => html`<li>${s.ph} · ${s.operator} · ${new Date(s.takenAt).toLocaleString()}</li>`
+              )}
             </ul>
             <input .value=${this.ph} @input=${(e) => (this.ph = e.target.value)} />
             <button @click=${this.writePh}>登记酸碱度</button>
